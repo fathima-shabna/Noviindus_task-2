@@ -93,6 +93,7 @@ class AddFeedProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // API expects categories as a list in multipart form
       final formData = FormData.fromMap({
         'video': await MultipartFile.fromFile(
           _videoFile!.path,
@@ -103,23 +104,41 @@ class AddFeedProvider extends ChangeNotifier {
           filename: 'image.jpg',
         ),
         'desc': _description,
-        'category': _selectedCategories.join(','),
       });
+
+      // Add categories properly as multiple 'category' fields
+      for (var catId in _selectedCategories) {
+        formData.fields.add(MapEntry('category', catId));
+      }
 
       final response = await _apiService.post(
         AppConstants.myFeed,
         data: formData,
-        // onSendProgress: (sent, total) {
-        //   _uploadProgress = sent / total;
-        //   notifyListeners();
-        // },
+        onSendProgress: (sent, total) {
+          if (total > 0) {
+            _uploadProgress = sent / total;
+            notifyListeners();
+          }
+        },
       );
 
       _isLoading = false;
       notifyListeners();
-      return response.statusCode == 200 || response.statusCode == 201;
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.data['status'] == true) {
+        return true;
+      } else {
+        _error = response.data['message'] ?? 'Upload failed.';
+        return false;
+      }
     } catch (e) {
-      _error = e.toString();
+      if (e is DioException) {
+        _error = e.response?.data?['message'] ?? e.message;
+      } else {
+        _error = e.toString();
+      }
       _isLoading = false;
       notifyListeners();
       return false;

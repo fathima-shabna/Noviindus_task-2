@@ -96,10 +96,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final category = homeProvider.categories[index];
-                    return _buildCategoryChip(
-                      category.title ?? 'Unknown',
-                      isActive: index == 0, // Mocking first as active
-                      icon: index == 0 ? Icons.explore_outlined : null,
+                    final isActive =
+                        homeProvider.selectedCategoryId == category.id ||
+                        (homeProvider.selectedCategoryId == null && index == 0);
+
+                    return GestureDetector(
+                      onTap: () => homeProvider.selectCategory(category.id),
+                      child: _buildCategoryChip(
+                        category.title ?? 'Unknown',
+                        isActive: isActive,
+                        icon: index == 0 ? Icons.explore_outlined : null,
+                      ),
                     );
                   },
                 ),
@@ -122,7 +129,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: homeProvider.feeds.length,
                       itemBuilder: (context, index) {
                         final feed = homeProvider.feeds[index];
-                        return FeedItemWidget(feed: feed);
+                        final isPlaying =
+                            homeProvider.activeVideoIndex == index;
+                        return FeedItemWidget(
+                          feed: feed,
+                          isPlaying: isPlaying,
+                          onVideoInit: () {
+                            homeProvider.setActiveVideo(index);
+                          },
+                        );
                       },
                     ),
             ),
@@ -130,10 +145,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20.0, right: 0.0),
+        padding: const EdgeInsets.only(bottom: 20.0),
         child: SizedBox(
-          width: 65,
-          height: 65,
+          width: 76,
+          height: 76,
           child: FloatingActionButton(
             onPressed: () {
               Navigator.push(
@@ -144,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: const Color(0xFFC60000),
             elevation: 4,
             shape: const CircleBorder(),
-            child: const Icon(Icons.add, color: Colors.white, size: 36),
+            child: const Icon(Icons.add, color: Colors.white, size: 48),
           ),
         ),
       ),
@@ -158,15 +173,13 @@ class _HomeScreenState extends State<HomeScreen> {
     IconData? icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: isActive ? const Color(0xFF321313) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive
-              ? const Color(0xFF4A1010)
-              : Colors.grey.withOpacity(0.3),
+          color: isActive ? const Color(0xFF4A1010) : const Color(0xFF333333),
           width: 1,
         ),
       ),
@@ -175,14 +188,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           if (icon != null) ...[
             Icon(icon, color: const Color(0xFFC60000), size: 16),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
           Text(
             label,
             style: TextStyle(
-              color: isActive ? Colors.white : Colors.white.withOpacity(0.6),
-              fontSize: 13,
-              fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+              color: isActive ? Colors.white : Colors.white.withOpacity(0.7),
+              fontSize: 14,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ],
@@ -191,15 +204,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class FeedItemWidget extends StatelessWidget {
+class FeedItemWidget extends StatefulWidget {
   final Feed feed;
-  const FeedItemWidget({super.key, required this.feed});
+  final bool isPlaying;
+  final VoidCallback onVideoInit;
+
+  const FeedItemWidget({
+    super.key,
+    required this.feed,
+    required this.isPlaying,
+    required this.onVideoInit,
+  });
+
+  @override
+  State<FeedItemWidget> createState() => _FeedItemWidgetState();
+}
+
+class _FeedItemWidgetState extends State<FeedItemWidget> {
+  bool _isDescriptionExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: const BoxDecoration(color: Color(0xFF1A1A1A)),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -211,19 +239,11 @@ class FeedItemWidget extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(1),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFC60000),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey[800],
-                    backgroundImage: NetworkImage(feed.userImageUrl!),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.grey[800],
+                  backgroundImage: NetworkImage(
+                    widget.feed.userImageUrl ?? 'https://i.pravatar.cc/150',
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -232,7 +252,7 @@ class FeedItemWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        feed.userName ?? 'User',
+                        widget.feed.userName ?? 'User',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -240,7 +260,7 @@ class FeedItemWidget extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        feed.timeAgo ?? 'Just now',
+                        widget.feed.timeAgo ?? 'Just now',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.5),
                           fontSize: 11,
@@ -249,60 +269,110 @@ class FeedItemWidget extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.more_horiz, color: Colors.white.withOpacity(0.6)),
               ],
             ),
           ),
 
-          // Video Player Area - Seamless (no padding)
-          if (feed.video != null)
-            FeedVideoPlayer(videoUrl: feed.video!, thumbnailUrl: feed.image),
-
-          // Description
-          if (feed.description != null && feed.description!.isNotEmpty)
+          // Video Player Area - Portrait & Seamless
+          if (widget.feed.video != null)
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                feed.description!,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 13,
-                  height: 1.4,
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: GestureDetector(
+                onTap: widget.isPlaying ? null : widget.onVideoInit,
+                child: widget.isPlaying
+                    ? FeedVideoPlayer(
+                        key: ValueKey(widget.feed.id ?? widget.feed.video),
+                        videoUrl: widget.feed.video!,
+                        thumbnailUrl: widget.feed.image,
+                        autoPlay: true,
+                      )
+                    : Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AspectRatio(
+                            aspectRatio:
+                                16 / 9, // Sane default until initialized
+                            child: widget.feed.image != null
+                                ? Image.network(
+                                    widget.feed.image!,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(color: Colors.black),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
 
-          // Interaction bar (Mock)
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            child: Row(
-              children: [
-                _buildInteractionItem(Icons.favorite_border, 'Like'),
-                const SizedBox(width: 20),
-                _buildInteractionItem(Icons.chat_bubble_outline, 'Comment'),
-                const Spacer(),
-                Icon(
-                  Icons.bookmark_border,
-                  color: Colors.white.withOpacity(0.6),
-                ),
-              ],
+          // Description
+          if (widget.feed.description != null &&
+              widget.feed.description!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: _buildDescription(widget.feed.description!),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildInteractionItem(IconData icon, String label) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white.withOpacity(0.6), size: 18),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+  Widget _buildDescription(String text) {
+    const int truncateAt = 100;
+    final bool isLong = text.length > truncateAt;
+
+    if (!isLong || _isDescriptionExpanded) {
+      return Text(
+        text,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.8),
+          fontSize: 13,
+          height: 1.4,
         ),
-      ],
+      );
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.8),
+          fontSize: 13,
+          height: 1.4,
+        ),
+        children: [
+          TextSpan(text: text.substring(0, truncateAt)),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: () => setState(() => _isDescriptionExpanded = true),
+              child: const Text(
+                '... See More',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

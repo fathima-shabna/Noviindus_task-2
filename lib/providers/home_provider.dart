@@ -12,6 +12,9 @@ class HomeProvider extends ChangeNotifier {
   List<Feed> _feeds = [];
   bool _isLoading = false;
   String? _error;
+  String? _selectedCategoryId;
+
+  int? _activeVideoIndex;
 
   HomeProvider(this._apiService);
 
@@ -19,6 +22,22 @@ class HomeProvider extends ChangeNotifier {
   List<Feed> get feeds => _feeds;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  int? get activeVideoIndex => _activeVideoIndex;
+  String? get selectedCategoryId => _selectedCategoryId;
+
+  void selectCategory(String? id) {
+    if (_selectedCategoryId == id) return;
+    _selectedCategoryId = id;
+    _feeds = []; // Clear current feeds
+    _activeVideoIndex = null;
+    notifyListeners();
+    fetchFeeds();
+  }
+
+  void setActiveVideo(int? index) {
+    _activeVideoIndex = index;
+    notifyListeners();
+  }
 
   Future<void> fetchCategories() async {
     _isLoading = true;
@@ -28,9 +47,11 @@ class HomeProvider extends ChangeNotifier {
     try {
       final response = await _apiService.get(AppConstants.categoryList);
       print(response.data);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['results'] ?? response.data;
-        _categories = data.map((json) => Category.fromJson(json)).toList();
+      if (response.statusCode == 200 || response.statusCode == 202) {
+        final data = response.data;
+        final List<dynamic> catData =
+            data['categories'] ?? (data['results'] ?? data);
+        _categories = catData.map((json) => Category.fromJson(json)).toList();
       }
       _isLoading = false;
       notifyListeners();
@@ -47,7 +68,15 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiService.get(AppConstants.home);
+      final Map<String, dynamic> queryParams = {};
+      if (_selectedCategoryId != null) {
+        queryParams['category_id'] = _selectedCategoryId;
+      }
+
+      final response = await _apiService.get(
+        AppConstants.home,
+        queryParameters: queryParams,
+      );
       if (response.statusCode == 200 || response.data['status'] == true) {
         final data = response.data;
 

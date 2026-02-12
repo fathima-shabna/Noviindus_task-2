@@ -112,6 +112,29 @@ class _AddFeedsScreenState extends State<AddFeedsScreen> {
                   ],
                 ),
               ),
+              if (addFeedProvider.isLoading)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: addFeedProvider.uploadProgress,
+                        backgroundColor: Colors.white10,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFC60000),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${(addFeedProvider.uploadProgress * 100).toInt()}% uploaded',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               if (addFeedProvider.error != null)
                 Padding(

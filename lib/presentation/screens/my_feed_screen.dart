@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/my_feed_provider.dart';
+import '../../data/models/feed_model.dart';
 import '../widgets/feed_video_player.dart';
 
 class MyFeedScreen extends StatefulWidget {
@@ -11,12 +12,29 @@ class MyFeedScreen extends StatefulWidget {
 }
 
 class _MyFeedScreenState extends State<MyFeedScreen> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MyFeedProvider>().fetchMyFeeds();
+      context.read<MyFeedProvider>().fetchMyFeeds(isRefresh: true);
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<MyFeedProvider>().fetchMyFeeds();
+    }
   }
 
   @override
@@ -78,73 +96,130 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
                         style: TextStyle(color: Colors.white.withOpacity(0.5)),
                       ),
                     )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: myFeedProvider.myFeeds.length,
-                      itemBuilder: (context, index) {
-                        final feed = myFeedProvider.myFeeds[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1A1A1A),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Video Area
-                              if (feed.video != null)
-                                FeedVideoPlayer(
-                                  videoUrl: feed.video!,
-                                  thumbnailUrl: feed.image,
-                                ),
-
-                              // Details
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        feed.description ?? '',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
-                                          fontSize: 13,
-                                          height: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.grey,
-                                      ),
-                                      onPressed: () async {
-                                        final success = await myFeedProvider
-                                            .deleteFeed(feed.id!);
-                                        if (success && mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Feed deleted'),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ],
+                  : RefreshIndicator(
+                      onRefresh: () =>
+                          myFeedProvider.fetchMyFeeds(isRefresh: true),
+                      color: const Color(0xFFC60000),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.zero,
+                        itemCount:
+                            myFeedProvider.myFeeds.length +
+                            (myFeedProvider.isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == myFeedProvider.myFeeds.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFC60000),
+                                  strokeWidth: 2,
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
+                            );
+                          }
+
+                          final feed = myFeedProvider.myFeeds[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 24),
+                            decoration: const BoxDecoration(
+                              color: Colors.transparent,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Video Section (Intrinsic Aspect Ratio)
+                                if (feed.video != null)
+                                  FeedVideoPlayer(
+                                    videoUrl: feed.video!,
+                                    thumbnailUrl: feed.image,
+                                  ),
+
+                                // Feed Details
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          feed.description ?? '',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(
+                                              0.7,
+                                            ),
+                                            fontSize: 13,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.grey,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _showDeleteDialog(
+                                          context,
+                                          myFeedProvider,
+                                          feed,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeleteDialog(
+    BuildContext context,
+    MyFeedProvider provider,
+    Feed feed,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Delete Feed', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to delete this post?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await provider.deleteFeed(feed.id!);
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Feed deleted successfully')),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFC60000)),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -32,9 +32,13 @@ class ApiService {
   Dio get dio => _dio;
 
   // POST method for Multipart/Form-Data
-  Future<Response> post(String path, {dynamic data}) async {
+  Future<Response> post(
+    String path, {
+    dynamic data,
+    void Function(int, int)? onSendProgress,
+  }) async {
     try {
-      return await _dio.post(path, data: data);
+      return await _dio.post(path, data: data, onSendProgress: onSendProgress);
     } catch (e) {
       rethrow;
     }

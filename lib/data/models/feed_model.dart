@@ -33,14 +33,23 @@ class Feed {
       }
     }
 
+    String? imageUrl = json['image'];
+    if (imageUrl != null && imageUrl.startsWith('/')) {
+      imageUrl = 'https://frijo.noviindus.in$imageUrl';
+    }
+
+    String? userImg = userData?['image'];
+    if (userImg != null && userImg.startsWith('/')) {
+      userImg = 'https://frijo.noviindus.in$userImg';
+    }
+
     return Feed(
       id: json['id'],
       video: json['video'],
-      image: json['image'],
+      image: imageUrl,
       description: json['description'],
       userName: userData?['name'] ?? 'User',
-      userImageUrl:
-          userData?['image'] ?? 'https://i.pravatar.cc/150', // Premium fallback
+      userImageUrl: userImg ?? 'https://i.pravatar.cc/150', // Premium fallback
       timeAgo: formattedTime,
     );
   }

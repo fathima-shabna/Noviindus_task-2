@@ -5,8 +5,14 @@ import 'package:chewie/chewie.dart';
 class FeedVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final String? thumbnailUrl;
+  final bool autoPlay;
 
-  const FeedVideoPlayer({super.key, required this.videoUrl, this.thumbnailUrl});
+  const FeedVideoPlayer({
+    super.key,
+    required this.videoUrl,
+    this.thumbnailUrl,
+    this.autoPlay = false,
+  });
 
   @override
   State<FeedVideoPlayer> createState() => _FeedVideoPlayerState();
@@ -31,10 +37,15 @@ class _FeedVideoPlayerState extends State<FeedVideoPlayer> {
 
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController,
-      autoPlay: false,
+      autoPlay: widget.autoPlay,
       looping: false,
       aspectRatio: _videoPlayerController.value.aspectRatio,
       showControls: true,
+      optionsTranslation: OptionsTranslation(
+        playbackSpeedButtonText: 'Speed',
+        subtitlesButtonText: 'Subtitles',
+        cancelButtonText: 'Cancel',
+      ),
       placeholder: widget.thumbnailUrl != null
           ? Image.network(
               widget.thumbnailUrl!,
@@ -67,23 +78,25 @@ class _FeedVideoPlayerState extends State<FeedVideoPlayer> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _chewieController == null) {
-      return AspectRatio(
-        aspectRatio: 16 / 9, // Fallback ratio before initialization
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (widget.thumbnailUrl != null)
-              Image.network(
-                widget.thumbnailUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              )
-            else
-              Container(color: Colors.black),
-            const CircularProgressIndicator(color: Color(0xFFC60000)),
-          ],
-        ),
-      );
+      return widget.thumbnailUrl != null
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.network(
+                  widget.thumbnailUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.fitWidth,
+                ),
+                const CircularProgressIndicator(color: Color(0xFFC60000)),
+              ],
+            )
+          : Container(
+              height: 200,
+              color: Colors.black,
+              child: const Center(
+                child: CircularProgressIndicator(color: Color(0xFFC60000)),
+              ),
+            );
     }
 
     return AspectRatio(
