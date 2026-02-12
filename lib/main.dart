@@ -1,11 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'my_feed_screen.dart';
-import 'home_screen.dart';
-import 'add_feeds_screen.dart';
+import 'package:provider/provider.dart';
+import 'presentation/screens/mobile_entry_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/home_provider.dart';
+import 'providers/add_feed_provider.dart';
+import 'providers/my_feed_provider.dart';
+import 'data/services/api_service.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider(create: (_) => ApiService()),
+        ChangeNotifierProxyProvider<ApiService, AuthProvider>(
+          create: (context) => AuthProvider(context.read<ApiService>()),
+          update: (context, api, auth) => auth ?? AuthProvider(api),
+        ),
+        ChangeNotifierProxyProvider<ApiService, HomeProvider>(
+          create: (context) => HomeProvider(context.read<ApiService>()),
+          update: (context, api, home) => home ?? HomeProvider(api),
+        ),
+        ChangeNotifierProxyProvider<ApiService, AddFeedProvider>(
+          create: (context) => AddFeedProvider(context.read<ApiService>()),
+          update: (context, api, add) => add ?? AddFeedProvider(api),
+        ),
+        ChangeNotifierProxyProvider<ApiService, MyFeedProvider>(
+          create: (context) => MyFeedProvider(context.read<ApiService>()),
+          update: (context, api, my) => my ?? MyFeedProvider(api),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -26,7 +53,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MyFeedScreen(),
+      home: const MobileEntryScreen(), // Start with Login
     );
   }
 }
