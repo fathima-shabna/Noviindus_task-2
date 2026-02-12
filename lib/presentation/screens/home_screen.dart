@@ -124,21 +124,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   : homeProvider.error != null
                   ? Center(child: Text('Error: ${homeProvider.error}'))
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: homeProvider.feeds.length,
-                      itemBuilder: (context, index) {
-                        final feed = homeProvider.feeds[index];
-                        final isPlaying =
-                            homeProvider.activeVideoIndex == index;
-                        return FeedItemWidget(
-                          feed: feed,
-                          isPlaying: isPlaying,
-                          onVideoInit: () {
-                            homeProvider.setActiveVideo(index);
-                          },
-                        );
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        await homeProvider.fetchCategories();
+                        await homeProvider.fetchFeeds();
                       },
+                      color: const Color(0xFFC60000),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: homeProvider.feeds.length,
+                        itemBuilder: (context, index) {
+                          final feed = homeProvider.feeds[index];
+                          final isPlaying =
+                              homeProvider.activeVideoIndex == index;
+                          return FeedItemWidget(
+                            feed: feed,
+                            isPlaying: isPlaying,
+                            onVideoInit: () {
+                              homeProvider.setActiveVideo(index);
+                            },
+                          );
+                        },
+                      ),
                     ),
             ),
           ],

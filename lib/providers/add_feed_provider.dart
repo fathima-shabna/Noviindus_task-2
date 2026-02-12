@@ -128,6 +128,7 @@ class AddFeedProvider extends ChangeNotifier {
       if (response.statusCode == 200 ||
           response.statusCode == 201 ||
           response.data['status'] == true) {
+        reset();
         return true;
       } else {
         _error = response.data['message'] ?? 'Upload failed.';

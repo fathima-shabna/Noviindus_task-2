@@ -83,24 +83,33 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
 
             // Content
             Expanded(
-              child: myFeedProvider.isLoading && myFeedProvider.myFeeds.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFC60000),
-                      ),
-                    )
-                  : myFeedProvider.myFeeds.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No feeds uploaded yet',
-                        style: TextStyle(color: Colors.white.withOpacity(0.5)),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () =>
-                          myFeedProvider.fetchMyFeeds(isRefresh: true),
-                      color: const Color(0xFFC60000),
-                      child: ListView.builder(
+              child: RefreshIndicator(
+                onRefresh: () => myFeedProvider.fetchMyFeeds(isRefresh: true),
+                color: const Color(0xFFC60000),
+                child:
+                    myFeedProvider.isLoading && myFeedProvider.myFeeds.isEmpty
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFC60000),
+                        ),
+                      )
+                    : myFeedProvider.myFeeds.isEmpty
+                    ? ListView(
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.7,
+                            child: Center(
+                              child: Text(
+                                'No feeds uploaded yet',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView.builder(
                         controller: _scrollController,
                         padding: EdgeInsets.zero,
                         itemCount:
@@ -174,7 +183,7 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
                           );
                         },
                       ),
-                    ),
+              ),
             ),
           ],
         ),
